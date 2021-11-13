@@ -4,8 +4,10 @@
  * http://www.multiweb.cz/twoinches/mp3inside.htm
  * https://wiki.hydrogenaud.io/index.php?title=MP3
  */
+mod mp3_frame;
 mod mp3_header;
 
+use mp3_frame::*;
 use mp3_header::*;
 use std::fs::File;
 use std::io::prelude::*;
@@ -71,16 +73,23 @@ pub fn get_first_mp3_frame_header(data: &Vec<u8>) -> Mp3FrameHeader {
     Mp3FrameHeader::new(header_data)
 }
 
-pub fn all_headers(data: &Vec<u8>) -> Vec<Mp3FrameHeader> {
+pub fn get_frames(data: &Vec<u8>) -> Vec<Mp3Frame> {
     let mut offset = get_id3_offset(data) as usize;
-    let mut headers = Vec::<Mp3FrameHeader>::new();
+    let mut frames = Vec::<Mp3Frame>::new();
+    let mut curr_pos = 0;
     while offset < data.len() {
         let header_data = u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap());
-        let curr = Mp3FrameHeader::new(header_data);
-        offset += curr.frame_length();
-        headers.push(curr);
+        let header = Mp3FrameHeader::new(header_data);
+        let frame_length = header.frame_length();
+        let frame_data = data[offset..offset + frame_length]
+            .iter()
+            .cloned()
+            .collect();
+        frames.push(Mp3Frame::new(header, frame_data, curr_pos));
+        offset += frame_length;
+        curr_pos += 1;
     }
-    headers
+    frames
 }
 
 #[cfg(test)]

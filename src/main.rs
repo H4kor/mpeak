@@ -16,10 +16,10 @@ fn main() {
                 "id3 data:           {:?}",
                 String::from_utf8_lossy(&mpeak::get_id3_data(&file_data))
             );
-            let headers = mpeak::all_headers(&file_data);
-            println!("frames              {:?}", headers.len());
-            println!("header              {:?}", headers[0]);
-            println!("header frame_length {:?}", headers[0].frame_length());
+            let frames = mpeak::get_frames(&file_data);
+            println!("frames              {:?}", frames.len());
+            println!("header              {:?}", frames[0].header);
+            println!("header frame_length {:?}", frames[0].header.frame_length());
         }
         Err(e) => println!("{:?}", e),
     };
