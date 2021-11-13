@@ -10,6 +10,9 @@ fn main() {
             println!("has id3:    {:?}", mpeak::has_id3(&file_data));
             println!("id3 offset: {:?}", mpeak::get_id3_offset(&file_data));
             println!("id3 data:   {:?}", String::from_utf8_lossy(&mpeak::get_id3_data(&file_data)));
+            let header = mpeak::get_first_mp3_frame_header(&file_data);
+            println!("header         {:?}", header);
+            println!("header frame_length {:?}", header.frame_length());
         },
         Err(e) => println!("{:?}", e)
     };
