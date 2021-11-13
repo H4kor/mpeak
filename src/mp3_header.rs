@@ -1,5 +1,26 @@
-
 use std::fmt;
+
+const V1_L1: [u16; 16] = [
+    0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0,
+];
+const V1_L2: [u16; 16] = [
+    0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0,
+];
+const V1_L3: [u16; 16] = [
+    0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0,
+];
+const V2_L1: [u16; 16] = [
+    0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0,
+];
+const V2_L2_3: [u16; 16] = [
+    0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0,
+];
+const VR_LR: [u16; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
+const MPEG1: [u16; 4] = [44100, 48000, 32000, 0];
+const MPEG2: [u16; 4] = [22050, 24000, 16000, 0];
+const MPEG2_5: [u16; 4] = [11025, 12000, 8000, 0];
+const MPEGR: [u16; 4] = [0, 0, 0, 0];
 
 #[derive(Debug, PartialEq)]
 pub enum MPeakError {
@@ -9,11 +30,11 @@ pub enum MPeakError {
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
-pub enum Mp3Version{
+pub enum Mp3Version {
     V25 = 0,
     Reserved = 1,
     V2 = 2,
-    V1 = 3
+    V1 = 3,
 }
 
 #[derive(Debug, PartialEq)]
@@ -22,7 +43,7 @@ pub enum Mp3Layer {
     Reserved = 0,
     Layer3 = 1,
     Layer2 = 2,
-    Layer1 = 3
+    Layer1 = 3,
 }
 
 #[derive(Debug, PartialEq)]
@@ -39,7 +60,6 @@ pub enum Mp3ChannelMode {
     DualChannel = 2,
     SingleChannel = 3,
 }
-
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
@@ -65,34 +85,16 @@ pub struct Mp3FrameHeader {
     // copyright: 00000000 00000000 00000000 00001000
     // original:  00000000 00000000 00000000 00000100
     // emphasis:  00000000 00000000 00000000 00000011
-    data: u32
+    data: u32,
 }
-
-
-const V1_L1: [u16; 16] = [0, 32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 0];
-const V1_L2: [u16; 16] = [0, 32, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 384, 0];
-const V1_L3: [u16; 16] = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320, 0];
-const V2_L1: [u16; 16] = [0, 32, 48, 56, 64, 80, 96, 112, 128, 144, 160, 176, 192, 224, 256, 0];
-const V2_L2_3: [u16; 16] = [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160, 0];
-const VR_LR: [u16; 16] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
-
-const MPEG1: [u16; 4] = [ 44100, 48000, 32000, 0 ];
-const MPEG2: [u16; 4] = [ 22050, 24000, 16000, 0 ];
-const MPEG2_5: [u16; 4] = [ 11025, 12000, 8000, 0 ];
-const MPEGR: [u16; 4] = [ 0, 0, 0, 0 ];
 
 impl Mp3FrameHeader {
     pub fn new(data: u32) -> Mp3FrameHeader {
-        Mp3FrameHeader{
-            data: data
-        }
+        Mp3FrameHeader { data: data }
     }
 
     pub fn version(&self) -> Mp3Version {
-        let bits: (bool, bool) = (
-            self.data >> 20 & 1 == 1,
-            self.data >> 19 & 1 == 1
-        );
+        let bits: (bool, bool) = (self.data >> 20 & 1 == 1, self.data >> 19 & 1 == 1);
         match bits {
             (false, false) => Mp3Version::V25,
             (false, true) => Mp3Version::Reserved,
@@ -101,12 +103,8 @@ impl Mp3FrameHeader {
         }
     }
 
-
     pub fn layer(&self) -> Mp3Layer {
-        let bits: (bool, bool) = (
-            self.data >> 18 & 1 == 1,
-            self.data >> 17 & 1 == 1
-        );
+        let bits: (bool, bool) = (self.data >> 18 & 1 == 1, self.data >> 17 & 1 == 1);
         match bits {
             (false, false) => Mp3Layer::Reserved,
             (false, true) => Mp3Layer::Layer3,
@@ -130,20 +128,15 @@ impl Mp3FrameHeader {
     pub fn sampling_rate_index(&self) -> u8 {
         (self.data >> 10 & 0x3) as u8
     }
-    
     pub fn padding_bit(&self) -> bool {
         self.data >> 9 & 1 == 1
     }
-    
     pub fn private_bit(&self) -> bool {
         self.data >> 8 & 1 == 1
     }
 
     pub fn channel_mode(&self) -> Mp3ChannelMode {
-        let bits: (bool, bool) = (
-            self.data >> 7 & 1 == 1,
-            self.data >> 6 & 1 == 1
-        );
+        let bits: (bool, bool) = (self.data >> 7 & 1 == 1, self.data >> 6 & 1 == 1);
         match bits {
             (false, false) => Mp3ChannelMode::Stereo,
             (false, true) => Mp3ChannelMode::JointStereo,
@@ -156,7 +149,6 @@ impl Mp3FrameHeader {
         (self.data >> 4 & 0x3) as u8
     }
 
-
     pub fn copyright(&self) -> bool {
         self.data >> 3 & 1 == 1
     }
@@ -166,10 +158,7 @@ impl Mp3FrameHeader {
     }
 
     pub fn emphasis(&self) -> Mp3Emphasis {
-        let bits: (bool, bool) = (
-            self.data >> 1 & 1 == 1,
-            self.data >> 0 & 1 == 1
-        );
+        let bits: (bool, bool) = (self.data >> 1 & 1 == 1, self.data >> 0 & 1 == 1);
         match bits {
             (false, false) => Mp3Emphasis::None,
             (false, true) => Mp3Emphasis::_50_15Ms,
@@ -184,14 +173,14 @@ impl Mp3FrameHeader {
                 Mp3Layer::Layer1 => V1_L1,
                 Mp3Layer::Layer2 => V1_L2,
                 Mp3Layer::Layer3 => V1_L3,
-                Mp3Layer::Reserved => VR_LR
+                Mp3Layer::Reserved => VR_LR,
             },
-            Mp3Version::V25 | Mp3Version::V2 =>  match self.layer() {
+            Mp3Version::V25 | Mp3Version::V2 => match self.layer() {
                 Mp3Layer::Layer1 => V2_L1,
                 Mp3Layer::Layer2 | Mp3Layer::Layer3 => V2_L2_3,
-                Mp3Layer::Reserved => VR_LR
+                Mp3Layer::Reserved => VR_LR,
             },
-            Mp3Version::Reserved => VR_LR
+            Mp3Version::Reserved => VR_LR,
         };
         let bitrate = bitrate_list[self.bitrate_index() as usize];
 
@@ -211,7 +200,6 @@ impl Mp3FrameHeader {
     }
 }
 
-
 impl fmt::Debug for Mp3FrameHeader {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Mp3FrameHeader")
@@ -220,7 +208,6 @@ impl fmt::Debug for Mp3FrameHeader {
             .finish()
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -237,7 +224,6 @@ mod tests {
         let header = Mp3FrameHeader::new(0b00000000000_11_0000000000000000000);
         assert_eq!(header.version(), Mp3Version::V1);
     }
-
 
     #[test]
     fn test_frame_header_layer() {
@@ -330,7 +316,6 @@ mod tests {
         let header = Mp3FrameHeader::new(0b_00000000_00000000_00000000_00000100);
         assert_eq!(header.original(), true);
     }
-    
     #[test]
     fn test_frame_header_emphasis() {
         let header = Mp3FrameHeader::new(0b_00000000_00000000_00000000_00000000);
@@ -363,5 +348,4 @@ mod tests {
         let header = Mp3FrameHeader::new(0b_00000000_00010010_10001010_00000000);
         assert_eq!(header.frame_length(), 577);
     }
-
 }
