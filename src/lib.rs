@@ -1,3 +1,10 @@
+/**
+ * Resources:
+ * http://www.datavoyage.com/mpgscript/mpeghdr.htm
+ * http://www.multiweb.cz/twoinches/mp3inside.htm
+ * https://wiki.hydrogenaud.io/index.php?title=MP3
+ */
+
 use std::io::prelude::*;
 use std::fs::File;
 
