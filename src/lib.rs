@@ -12,6 +12,13 @@ use mp3_header::*;
 use std::fs::File;
 use std::io::prelude::*;
 
+#[derive(Debug, PartialEq)]
+pub enum MPeakError {
+    CannotOpenFile,
+    CannotReadFile,
+    InvalidMp3Header,
+}
+
 pub fn load_file(file_path: &String) -> Result<Vec<u8>, MPeakError> {
     match File::open(file_path) {
         Ok(mut f) => {
@@ -73,14 +80,14 @@ pub fn get_first_mp3_frame_header(data: &Vec<u8>) -> Mp3FrameHeader {
     Mp3FrameHeader::new(header_data)
 }
 
-pub fn get_frames(data: &Vec<u8>) -> Vec<Mp3Frame> {
+pub fn get_frames(data: &Vec<u8>) -> Result<Vec<Mp3Frame>, MPeakError> {
     let mut offset = get_id3_offset(data) as usize;
     let mut frames = Vec::<Mp3Frame>::new();
     let mut curr_pos = 0;
     while offset < data.len() {
         let header_data = u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap());
         let header = Mp3FrameHeader::new(header_data);
-        let frame_length = header.frame_length();
+        let frame_length = header.frame_length()?;
         let frame_data = data[offset..offset + frame_length]
             .iter()
             .cloned()
@@ -89,7 +96,7 @@ pub fn get_frames(data: &Vec<u8>) -> Vec<Mp3Frame> {
         offset += frame_length;
         curr_pos += 1;
     }
-    frames
+    Ok(frames)
 }
 
 #[cfg(test)]

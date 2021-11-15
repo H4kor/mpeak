@@ -16,7 +16,7 @@ fn main() {
                 "id3 data:           {:?}",
                 String::from_utf8_lossy(&mpeak::get_id3_data(&file_data))
             );
-            let frames = mpeak::get_frames(&file_data);
+            let frames = mpeak::get_frames(&file_data).unwrap();
             println!("frames              {:?}", frames.len());
             println!("header              {:?}", frames[0].header);
             println!("header frame_length {:?}", frames[0].header.frame_length());

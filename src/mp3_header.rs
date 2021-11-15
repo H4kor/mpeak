@@ -1,3 +1,4 @@
+use super::MPeakError;
 use std::fmt;
 
 const V1_L1: [u16; 16] = [
@@ -21,12 +22,6 @@ const MPEG1: [u16; 4] = [44100, 48000, 32000, 0];
 const MPEG2: [u16; 4] = [22050, 24000, 16000, 0];
 const MPEG2_5: [u16; 4] = [11025, 12000, 8000, 0];
 const MPEGR: [u16; 4] = [0, 0, 0, 0];
-
-#[derive(Debug, PartialEq)]
-pub enum MPeakError {
-    CannotOpenFile,
-    CannotReadFile,
-}
 
 #[derive(Debug, PartialEq)]
 #[repr(u8)]
@@ -167,7 +162,7 @@ impl Mp3FrameHeader {
         }
     }
 
-    pub fn frame_length(&self) -> usize {
+    pub fn frame_length(&self) -> Result<usize, MPeakError> {
         let bitrate_list = match self.version() {
             Mp3Version::V1 => match self.layer() {
                 Mp3Layer::Layer1 => V1_L1,
@@ -191,11 +186,16 @@ impl Mp3FrameHeader {
             Mp3Version::Reserved => MPEGR,
         };
         let sample_rate = sample_rate_list[self.sampling_rate_index() as usize];
+
+        if sample_rate == 0 || bitrate == 0 {
+            return Err(MPeakError::InvalidMp3Header);
+        }
+
         let frame_len: u32 = 144 * (bitrate as u32) * 1000 / (sample_rate as u32);
         if self.padding_bit() {
-            (frame_len + 1) as usize
+            Ok((frame_len + 1) as usize)
         } else {
-            frame_len as usize
+            Ok(frame_len as usize)
         }
     }
 }
@@ -332,20 +332,20 @@ mod tests {
     fn test_frame_length() {
         // V1 Layer 1 birate 4 samplerate 0
         let header = Mp3FrameHeader::new(0b_00000000_00011110_01000000_00000000);
-        assert_eq!(header.frame_length(), 417);
+        assert_eq!(header.frame_length().unwrap(), 417);
         // V1 Layer 2 birate 13 samplerate 1
         let header = Mp3FrameHeader::new(0b_00000000_00011100_11010100_00000000);
-        assert_eq!(header.frame_length(), 960);
+        assert_eq!(header.frame_length().unwrap(), 960);
 
         // V2 Layer 1 birate 2 samplerate 2
         let header = Mp3FrameHeader::new(0b_00000000_00010110_00101000_00000000);
-        assert_eq!(header.frame_length(), 432);
+        assert_eq!(header.frame_length().unwrap(), 432);
         // V2 layer 3 birate 8 samplerate 2
         let header = Mp3FrameHeader::new(0b_00000000_00010010_10001000_00000000);
-        assert_eq!(header.frame_length(), 576);
+        assert_eq!(header.frame_length().unwrap(), 576);
 
         // V2 layer 3 birate 8 samplerate 2 + padding
         let header = Mp3FrameHeader::new(0b_00000000_00010010_10001010_00000000);
-        assert_eq!(header.frame_length(), 577);
+        assert_eq!(header.frame_length().unwrap(), 577);
     }
 }
