@@ -7,6 +7,9 @@ edition = "2021"
 name = "mpeak"
 path = "src/main.rs"
 
+[dependencies]
+rand = "0.8.0"
+
 [lib]
 name = "mpeak"
 path = "src/lib.rs"

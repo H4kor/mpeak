@@ -4,10 +4,11 @@
  * http://www.multiweb.cz/twoinches/mp3inside.htm
  * https://wiki.hydrogenaud.io/index.php?title=MP3
  */
+mod mp3_body;
 mod mp3_frame;
 mod mp3_header;
 
-use mp3_frame::*;
+pub use mp3_frame::Mp3Frame;
 use mp3_header::*;
 use std::fs::File;
 use std::io::prelude::*;
