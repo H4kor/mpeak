@@ -61,8 +61,10 @@ pub fn get_id3_offset(data: &Vec<u8>) -> u32 {
         if data.len() < 10 {
             data.len() as u32
         } else {
-            let slice: [u8; 4] = data[6..10].try_into().unwrap();
-            10 + u32::from_be_bytes(slice)
+            10 + ((data[6] as u32) << 21
+                | (data[7] as u32) << 14
+                | (data[8] as u32) << 7
+                | (data[9] as u32) >> 0)
         }
     } else {
         0
@@ -88,14 +90,23 @@ pub fn get_frames(data: &Vec<u8>) -> Result<Vec<Mp3Frame>, MPeakError> {
     while offset < data.len() {
         let header_data = u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap());
         let header = Mp3FrameHeader::new(header_data);
-        let frame_length = header.frame_length()?;
-        let frame_data = data[offset..offset + frame_length]
-            .iter()
-            .cloned()
-            .collect();
-        frames.push(Mp3Frame::new(header, frame_data, curr_pos));
-        offset += frame_length;
-        curr_pos += 1;
+        match header.frame_length() {
+            Ok(frame_length) => {
+                let frame_data = data[offset..offset + frame_length]
+                    .iter()
+                    .cloned()
+                    .collect();
+                frames.push(Mp3Frame::new(header, frame_data, curr_pos));
+                offset += frame_length;
+                curr_pos += 1;
+            }
+            Err(_) => {
+                let frame_data = data[offset..data.len()].iter().cloned().collect();
+                frames.push(Mp3Frame::new(header, frame_data, curr_pos));
+                offset = data.len();
+                curr_pos += 1;
+            }
+        }
     }
     Ok(frames)
 }
@@ -128,5 +139,48 @@ mod tests {
         assert_eq!(is_mp3_file(&vec![0x49, 0x44]), false);
         assert_eq!(is_mp3_file(&vec![0x49, 0x44, 0x33]), true);
         assert_eq!(is_mp3_file(&vec![0x49, 0x44, 0x33, 0x90]), true);
+    }
+
+    #[test]
+    fn test_get_id3_offset() {
+        assert_eq!(
+            get_id3_offset(&vec![
+                0x49, 0x44, 0x33, 0x90, 0x0, 0x0, // id3 header
+                0x0, 0x0, 0x0, 0x0, // length bits
+            ]),
+            10 + 0
+        );
+
+        assert_eq!(
+            get_id3_offset(&vec![
+                0x49, 0x44, 0x33, 0x90, 0x0, 0x0, // id3 header
+                0x0, 0x0, 0x0, 0x1, // length bits
+            ]),
+            10 + 1
+        );
+
+        assert_eq!(
+            get_id3_offset(&vec![
+                0x49, 0x44, 0x33, 0x90, 0x0, 0x0, // id3 header
+                0x0, 0x0, 0x1, 0x1, // length bits
+            ]),
+            10 + 128 + 1
+        );
+
+        assert_eq!(
+            get_id3_offset(&vec![
+                0x49,
+                0x44,
+                0x33,
+                0x90,
+                0x0,
+                0x0, // id3 header
+                0b0111_1111,
+                0b0111_1111,
+                0b0111_1111,
+                0b0111_1111, // length bits
+            ]),
+            10 + 0b1111111_1111111_1111111_1111111
+        );
     }
 }
